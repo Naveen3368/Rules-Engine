@@ -429,3 +429,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 ⭐ **Star this repository if you find it helpful!**
+GPT Prompts
+
+1)Rewrite this prompt to support below mentioned rules in drools. The rules that i gave are hardcoded, want to make my rules in a dynamic way. for example age is check is optional, credit score is mandatory, employment year is optional, ect.., If value is provided for any field ( even if its optional we need to perform validation with different threshold limits, for eg for client age limit is 18, other client age limit is 20, how can we build a rules engine with configuration to support above requirement)
+2)This is great but it will  fail if we apply another business domain for example  life insurance, travel insurance, car insurance domain which has different rules with different attributes then how can you  solve it.  
+3)i want it have working application to support mortgage and travel insurance underwriter capabilities, please provide complete code base with docker compose so that i can run locally in addition to that give me couple sample  test data to test mortgage underwriter and travel underwriter with different configured threshold limits which should support based on all above prompts. 
+4)I have no idea on KJAR + KieScanner what is this and what are the capabilities how does it help in this situation. of course i need to extend for auto and life. Please give me update code with various possible test rules. 
