@@ -1,0 +1,57 @@
+package rules
+
+import com.example.underwriter.model.FactsEnvelope;
+import com.example.underwriter.model.UnderwriteResult.Status;
+import java.util.Map;
+
+global java.util.Map config;
+
+rule "mortgage.creditScore.reject"
+  agenda-group "eligibility"
+  salience 100
+when
+  $env : FactsEnvelope( domain == "mortgage" )
+  eval( ((Map)config.getOrDefault("creditScore", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $score : Integer() from ((Map)$env.getAttributes()).get("creditScore")
+  eval( $score != null && $score < ((Number)((Map)config.get("creditScore")).getOrDefault("minReject", 640)).intValue() )
+then
+  $env.getResult().addReason("REJECT: Credit score below minimum");
+end
+
+rule "mortgage.dti.reject"
+  agenda-group "affordability"
+  salience 60
+when
+  $env : FactsEnvelope( domain == "mortgage" )
+  eval( ((Map)config.getOrDefault("dti", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $dti : Double() from ((Map)$env.getDerived()).get("dti")
+  eval( $dti != null && $dti > ((Number)((Map)config.get("dti")).getOrDefault("rejectAbove", 0.5)).doubleValue() )
+then
+  $env.getResult().addReason("REJECT: DTI too high");
+end
+
+rule "mortgage.ltv.manual"
+  agenda-group "affordability"
+  salience 50
+when
+  $env : FactsEnvelope( domain == "mortgage" )
+  eval( ((Map)config.getOrDefault("ltv", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $ltv : Double() from ((Map)$env.getDerived()).get("ltv")
+  eval( $ltv != null && $ltv >= ((Number)((Map)config.get("ltv")).getOrDefault("manualMin", 0.90)).doubleValue() )
+then
+  $env.getResult().addReason("MANUAL: LTV in manual band");
+end
+
+rule "mortgage.finalize"
+  agenda-group "finalize"
+  salience 10
+when
+  $env : FactsEnvelope( domain == "mortgage" )
+then
+  boolean hasReject = false;
+  boolean hasManual = false;
+  for (Object rr : $env.getResult().getReasons()) { String s = String.valueOf(rr).toLowerCase(); if (s.startsWith("reject")) hasReject = true; if (s.startsWith("manual")) hasManual = true; }
+  if (hasReject) $env.getResult().setStatus(Status.REJECTED);
+  else if (hasManual) $env.getResult().setStatus(Status.MANUAL_REVIEW);
+  else $env.getResult().setStatus(Status.APPROVED);
+end

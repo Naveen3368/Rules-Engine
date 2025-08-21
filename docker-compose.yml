@@ -1,0 +1,8 @@
+services:
+  underwriter:
+    build: .
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    volumes:
+      - C:/Users/navee/.m2:/root/.m2

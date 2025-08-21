@@ -1,0 +1,5 @@
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+  <kbase name="auto-rules" packages="rules">
+    <ksession name="auto-session"/>
+  </kbase>
+</kmodule>

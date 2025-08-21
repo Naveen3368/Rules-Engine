@@ -1,0 +1,5 @@
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+  <kbase name="life-rules" packages="rules">
+    <ksession name="life-session"/>
+  </kbase>
+</kmodule>

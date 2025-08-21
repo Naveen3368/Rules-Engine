@@ -1,0 +1,27 @@
+{
+  "age": {
+    "enabled": true,
+    "min": 20,
+    "max": 70
+  },
+  "tripDays": {
+    "enabled": true,
+    "max": 21
+  },
+  "destinationRisk": {
+    "enabled": true,
+    "reject": [
+      "HIGH",
+      "MEDIUM"
+    ],
+    "manual": []
+  },
+  "preExistingConditions": {
+    "enabled": true,
+    "mode": "reject"
+  },
+  "sumInsured": {
+    "enabled": true,
+    "max": 75000
+  }
+}

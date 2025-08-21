@@ -1,0 +1,5 @@
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+  <kbase name="mortgage-rules" packages="rules">
+    <ksession name="mortgage-session"/>
+  </kbase>
+</kmodule>

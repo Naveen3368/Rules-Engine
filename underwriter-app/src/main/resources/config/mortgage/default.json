@@ -1,0 +1,27 @@
+{
+  "creditScore": {
+    "enabled": true,
+    "minReject": 640,
+    "manualMin": 640,
+    "manualMax": 679
+  },
+  "dti": {
+    "enabled": true,
+    "rejectAbove": 0.5,
+    "manualMin": 0.4,
+    "manualMax": 0.5
+  },
+  "ltv": {
+    "enabled": true,
+    "manualMin": 0.9,
+    "rejectAbove": 0.95
+  },
+  "age": {
+    "enabled": true,
+    "min": 18
+  },
+  "employmentYears": {
+    "enabled": true,
+    "min": 1.0
+  }
+}

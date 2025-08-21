@@ -1,0 +1,58 @@
+package rules
+
+import com.example.underwriter.model.FactsEnvelope;
+import com.example.underwriter.model.UnderwriteResult.Status;
+import java.util.Map;
+
+global java.util.Map config;
+
+rule "auto.driverAge.min"
+  agenda-group "eligibility"
+  salience 100
+when
+  $env : FactsEnvelope( domain == "auto" )
+  eval( ((Map)config.getOrDefault("driverAge", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $age : Integer() from ((Map)$env.getAttributes()).get("driverAge")
+  eval( $age != null && $age < ((Number)((Map)config.get("driverAge")).getOrDefault("min", 18)).intValue() )
+then
+  $env.getResult().addReason("REJECT: Driver age below minimum");
+end
+
+rule "auto.incidents.tooMany"
+  agenda-group "risk"
+  salience 80
+when
+  $env : FactsEnvelope( domain == "auto" )
+  eval( ((Map)config.getOrDefault("incidents", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $n : Integer() from ((Map)$env.getAttributes()).get("incidentsLast3Years")
+  eval( $n != null && $n > ((Number)((Map)config.get("incidents")).getOrDefault("rejectAbove", 2)).intValue() )
+then
+  $env.getResult().addReason("REJECT: Too many past incidents");
+end
+
+rule "auto.coverage.cap"
+  agenda-group "risk"
+  salience 60
+when
+  $env : FactsEnvelope( domain == "auto" )
+  eval( ((Map)config.getOrDefault("coverage", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $desired : Double() from ((Map)$env.getAttributes()).get("desiredCoverage")
+  $vv : Double() from ((Map)$env.getAttributes()).get("vehicleValue")
+  eval( $desired != null && $vv != null && $desired > $vv * ((Number)((Map)config.get("coverage")).getOrDefault("maxFactor", 1.2)).doubleValue() )
+then
+  $env.getResult().addReason("MANUAL: Coverage exceeds cap vs vehicle value");
+end
+
+rule "auto.finalize"
+  agenda-group "finalize"
+  salience 10
+when
+  $env : FactsEnvelope( domain == "auto" )
+then
+  boolean hasReject = false;
+  boolean hasManual = false;
+  for (Object rr : $env.getResult().getReasons()) { String s = String.valueOf(rr).toLowerCase(); if (s.startsWith("reject")) hasReject = true; if (s.startsWith("manual")) hasManual = true; }
+  if (hasReject) $env.getResult().setStatus(Status.REJECTED);
+  else if (hasManual) $env.getResult().setStatus(Status.MANUAL_REVIEW);
+  else $env.getResult().setStatus(Status.APPROVED);
+end

@@ -1,0 +1,60 @@
+package rules
+
+import com.example.underwriter.model.FactsEnvelope;
+import com.example.underwriter.model.UnderwriteResult.Status;
+import java.util.Map;
+
+global java.util.Map config;
+
+rule "life.age.bounds"
+  agenda-group "eligibility"
+  salience 100
+when
+  $env : FactsEnvelope( domain == "life" )
+  eval( ((Map)config.getOrDefault("age", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $age : Integer() from ((Map)$env.getAttributes()).get("age")
+  eval( $age != null && ($age < ((Number)((Map)config.get("age")).getOrDefault("min", 18)).intValue() ||
+                         $age > ((Number)((Map)config.get("age")).getOrDefault("max", 70)).intValue()) )
+then
+  $env.getResult().addReason("REJECT: Age outside bounds");
+end
+
+rule "life.smoker.load"
+  agenda-group "risk"
+  salience 70
+when
+  $env : FactsEnvelope( domain == "life" )
+  eval( ((Map)config.getOrDefault("smoker", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $sm : Boolean() from ((Map)$env.getAttributes()).get("smoker")
+  eval( $sm != null && $sm.booleanValue() == true )
+then
+  Object mode = ((Map)config.get("smoker")).getOrDefault("mode", "manual");
+  if ("reject".equals(String.valueOf(mode))) $env.getResult().addReason("REJECT: Smoker excluded");
+  else $env.getResult().addReason("MANUAL: Smoker load applies");
+end
+
+rule "life.sumAssured.max"
+  agenda-group "risk"
+  salience 60
+when
+  $env : FactsEnvelope( domain == "life" )
+  eval( ((Map)config.getOrDefault("sumAssured", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $sa : Double() from ((Map)$env.getAttributes()).get("sumAssured")
+  eval( $sa != null && $sa > ((Number)((Map)config.get("sumAssured")).getOrDefault("max", 1000000)).doubleValue() )
+then
+  $env.getResult().addReason("MANUAL: Sum assured exceeds cap");
+end
+
+rule "life.finalize"
+  agenda-group "finalize"
+  salience 10
+when
+  $env : FactsEnvelope( domain == "life" )
+then
+  boolean hasReject = false;
+  boolean hasManual = false;
+  for (Object rr : $env.getResult().getReasons()) { String s = String.valueOf(rr).toLowerCase(); if (s.startsWith("reject")) hasReject = true; if (s.startsWith("manual")) hasManual = true; }
+  if (hasReject) $env.getResult().setStatus(Status.REJECTED);
+  else if (hasManual) $env.getResult().setStatus(Status.MANUAL_REVIEW);
+  else $env.getResult().setStatus(Status.APPROVED);
+end

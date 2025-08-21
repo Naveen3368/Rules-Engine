@@ -1,0 +1,9 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: underwriter-app
+logging:
+  level:
+    root: INFO
+    com.example.underwriter: INFO

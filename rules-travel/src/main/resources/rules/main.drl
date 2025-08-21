@@ -1,0 +1,49 @@
+package rules
+
+import com.example.underwriter.model.FactsEnvelope;
+import com.example.underwriter.model.UnderwriteResult.Status;
+import java.util.Map; import java.util.List;
+
+global java.util.Map config;
+
+rule "travel.age.min"
+  agenda-group "eligibility"
+  salience 100
+when
+  $env : FactsEnvelope( domain == "travel" )
+  eval( ((Map)config.getOrDefault("age", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $age : Integer() from ((Map)$env.getAttributes()).get("age")
+  eval( $age != null && $age < ((Number)((Map)config.get("age")).getOrDefault("min", 18)).intValue() )
+then
+  $env.getResult().addReason("REJECT: Age below minimum");
+end
+
+rule "travel.destinationRisk.rules"
+  agenda-group "risk"
+  salience 65
+when
+  $env : FactsEnvelope( domain == "travel" )
+  eval( ((Map)config.getOrDefault("destinationRisk", java.util.Map.of("enabled", false))).get("enabled").equals(true) )
+  $dr : String() from ((Map)$env.getAttributes()).get("destinationRisk")
+  $rej : List() from ((Map)config.get("destinationRisk")).getOrDefault("reject", java.util.List.of())
+  $man : List() from ((Map)config.get("destinationRisk")).getOrDefault("manual", java.util.List.of())
+  eval( $dr != null && ($rej.contains($dr) || $man.contains($dr)) )
+then
+  java.util.List rej = (java.util.List)((Map)config.get("destinationRisk")).getOrDefault("reject", java.util.List.of());
+  if (rej.contains($dr)) $env.getResult().addReason("REJECT: Destination risk not allowed (" + $dr + ")");
+  else $env.getResult().addReason("MANUAL: Destination risk requires review (" + $dr + ")");
+end
+
+rule "travel.finalize"
+  agenda-group "finalize"
+  salience 10
+when
+  $env : FactsEnvelope( domain == "travel" )
+then
+  boolean hasReject = false;
+  boolean hasManual = false;
+  for (Object rr : $env.getResult().getReasons()) { String s = String.valueOf(rr).toLowerCase(); if (s.startsWith("reject")) hasReject = true; if (s.startsWith("manual")) hasManual = true; }
+  if (hasReject) $env.getResult().setStatus(Status.REJECTED);
+  else if (hasManual) $env.getResult().setStatus(Status.MANUAL_REVIEW);
+  else $env.getResult().setStatus(Status.APPROVED);
+end

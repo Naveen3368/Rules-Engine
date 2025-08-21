@@ -1,0 +1,8 @@
+{
+  "age": 40,
+  "tripDays": 10,
+  "destinationRisk": "LOW",
+  "sumInsured": 50000,
+  "preExistingConditions": false,
+  "pastClaims": 0
+}

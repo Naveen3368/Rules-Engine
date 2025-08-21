@@ -1,0 +1,14 @@
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+  <kbase name="mortgage-rules" packages="rules">
+    <ksession name="mortgage-session"/>
+  </kbase>
+  <kbase name="travel-rules" packages="rules">
+    <ksession name="travel-session"/>
+  </kbase>
+  <kbase name="auto-rules" packages="rules">
+    <ksession name="auto-session"/>
+  </kbase>
+  <kbase name="life-rules" packages="rules">
+    <ksession name="life-session"/>
+  </kbase>
+</kmodule>

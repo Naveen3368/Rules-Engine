@@ -1,0 +1,15 @@
+{
+  "age": {
+    "enabled": true,
+    "min": 18,
+    "max": 70
+  },
+  "smoker": {
+    "enabled": true,
+    "mode": "manual"
+  },
+  "sumAssured": {
+    "enabled": true,
+    "max": 1000000
+  }
+}

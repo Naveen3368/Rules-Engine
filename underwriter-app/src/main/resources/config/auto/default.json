@@ -1,0 +1,14 @@
+{
+  "driverAge": {
+    "enabled": true,
+    "min": 18
+  },
+  "incidents": {
+    "enabled": true,
+    "rejectAbove": 2
+  },
+  "coverage": {
+    "enabled": true,
+    "maxFactor": 1.2
+  }
+}
