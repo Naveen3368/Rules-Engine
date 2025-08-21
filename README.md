@@ -1,268 +1,255 @@
-# Underwriter Rules Engine - Scalable Modular Architecture
+# Underwriter Rules Engine
 
-## Overview
+A sophisticated, domain-driven rules engine built with Spring Boot and Drools, designed for financial underwriting decisions across multiple domains (Mortgage, Auto, Life, and Travel insurance).
 
-This is a scalable, modular rules engine built with Spring Boot and Drools that supports dynamic rule loading and domain-specific rule management.
+## 🚀 Features
 
-## Architecture
+- **Multi-Domain Support**: Handles underwriting for Mortgage, Auto, Life, and Travel insurance
+- **Dynamic Rule Loading**: Supports both dynamic loading from Maven repositories and fallback to embedded rules
+- **Configurable Rules**: Domain-specific configurations for different clients and products
+- **RESTful API**: Clean REST endpoints for decision requests
+- **Docker Support**: Containerized deployment with Docker and Docker Compose
+- **Comprehensive Documentation**: Detailed sequence diagrams and architecture documentation
 
-### Core Components
+## 🏗️ Architecture
 
-1. **Main Application** (`underwriter-app`)
-   - Spring Boot web application
-   - REST API endpoints for rule execution
-   - Dynamic rule loading and management
+The system follows a modular architecture with clear separation of concerns:
 
-2. **Rule Modules** (Separate Maven projects)
-   - `rules-mortgage` - Mortgage underwriting rules
-   - `rules-travel` - Travel insurance rules
-   - `rules-auto` - Auto insurance rules
-   - `rules-life` - Life insurance rules
+- **Domain Adapters**: Transform and normalize data for each insurance domain
+- **Rules Registry**: Manages rule loading and KieContainer lifecycle
+- **Engine Service**: Orchestrates rule execution and decision processing
+- **Configuration Store**: Manages domain-specific configurations
+- **REST Controller**: Handles HTTP requests and responses
 
-3. **Dynamic Rule Loading**
-   - Attempts to load rules dynamically from Maven repository
-   - Falls back to classpath loading if dynamic loading fails
-   - Supports hot-reloading of rule updates
+## 📋 Prerequisites
 
-## Scalable Design Principles
+- Java 11 or higher
+- Maven 3.6+
+- Docker (optional, for containerized deployment)
 
-### 1. Modular Rule Development
-Each domain has its own rule module:
-```
-rules-mortgage/
-├── src/main/resources/
-│   ├── META-INF/kmodule.xml
-│   └── rules/main.drl
-└── pom.xml
+## 🛠️ Setup & Installation
 
-rules-travel/
-├── src/main/resources/
-│   ├── META-INF/kmodule.xml
-│   └── rules/main.drl
-└── pom.xml
-```
+### 1. Clone the Repository
 
-### 2. Dynamic Rule Loading
-The `RulesRegistry` implements a two-tier loading strategy:
-
-```java
-private void initializeContainers() {
-    try {
-        // First, try to load rules dynamically from Maven repository
-        if (tryDynamicLoading()) {
-            return;
-        }
-        
-        // Fallback to classpath loading if dynamic loading fails
-        loadFromClasspath();
-        
-    } catch (Exception e) {
-        throw new RuntimeException("Failed to initialize rule containers", e);
-    }
-}
-```
-
-### 3. Domain-Specific Rule Management
-Each domain has its own KieContainer and session:
-- `mortgage-session` for mortgage rules
-- `travel-session` for travel rules
-- `auto-session` for auto rules
-- `life-session` for life rules
-
-## Adding New Rule Domains
-
-### Step 1: Create New Rule Module
 ```bash
-# Create new rule module
-mkdir rules-health
-cd rules-health
+git clone https://github.com/Naveen3368/Rules-Engine.git
+cd Rules-Engine
 ```
 
-### Step 2: Configure Module
-Create `pom.xml`:
-```xml
-<project>
-    <groupId>com.example</groupId>
-    <artifactId>rules-health</artifactId>
-    <version>0.2.1</version>
-    <packaging>jar</packaging>
-    
-    <dependencies>
-        <dependency>
-            <groupId>org.kie</groupId>
-            <artifactId>kie-api</artifactId>
-            <version>${drools.version}</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-    
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.kie</groupId>
-                <artifactId>kie-maven-plugin</artifactId>
-                <extensions>true</extensions>
-            </plugin>
-        </plugins>
-    </build>
-</project>
+### 2. Build the Project
+
+```bash
+mvn clean install
 ```
 
-### Step 3: Create Rules
-Create `src/main/resources/META-INF/kmodule.xml`:
-```xml
-<kmodule xmlns="http://www.drools.org/xsd/kmodule">
-  <kbase name="health-rules" packages="rules">
-    <ksession name="health-session"/>
-  </kbase>
-</kmodule>
+### 3. Run the Application
+
+#### Option A: Direct Execution
+```bash
+cd underwriter-app
+mvn spring-boot:run
 ```
 
-Create `src/main/resources/rules/main.drl`:
-```drl
-package rules
-
-import com.example.underwriter.model.FactsEnvelope;
-import com.example.underwriter.model.UnderwriteResult.Status;
-import java.util.Map;
-
-global java.util.Map config;
-
-rule "health.age.reject"
-  agenda-group "eligibility"
-  salience 100
-when
-  $env : FactsEnvelope( domain == "health" )
-  $age : Integer() from ((Map)$env.getAttributes()).get("age")
-  eval( $age != null && $age > 65 )
-then
-  $env.getResult().addReason("REJECT: Age exceeds maximum");
-end
-
-rule "health.finalize"
-  agenda-group "finalize"
-  salience 10
-when
-  $env : FactsEnvelope( domain == "health" )
-then
-  $env.getResult().setStatus(Status.APPROVED);
-end
+#### Option B: Docker Deployment
+```bash
+docker-compose up -d
 ```
 
-### Step 4: Register in Main Application
-Add to `RulesRegistry.java`:
-```java
-// In tryDynamicLoading() method
-loadDomainRules("health", "com.example", "rules-health", "0.2.1");
+The application will start on port 8081.
 
-// In loadFromClasspath() method
-containers.put("health", kc);
-```
+## 🎯 Usage
 
-### Step 5: Add Dependency
-Add to `underwriter-app/pom.xml`:
-```xml
-<dependency>
-    <groupId>com.example</groupId>
-    <artifactId>rules-health</artifactId>
-    <version>${project.version}</version>
-</dependency>
-```
+### API Endpoints
 
-## API Usage
+The application exposes a REST API for underwriting decisions:
 
-### Endpoint
 ```
 POST /decide/{domain}/{product}?clientId={clientId}
 ```
 
-### Examples
+### Supported Domains
+- `mortgage` - Mortgage insurance underwriting
+- `auto` - Auto insurance underwriting  
+- `life` - Life insurance underwriting
+- `travel` - Travel insurance underwriting
 
-**Mortgage Decision:**
+### Example Requests
+
+#### Mortgage Underwriting
 ```bash
-curl -X POST "http://localhost:8081/decide/mortgage/standard?clientId=test123" \
+curl -X POST "http://localhost:8081/decide/mortgage/standard?clientId=default" \
   -H "Content-Type: application/json" \
   -d '{
-    "creditScore": 650,
-    "income": 75000,
-    "loanAmount": 300000,
-    "propertyValue": 350000
+    "creditScore": 750,
+    "income": 85000,
+    "downPayment": 50000,
+    "loanAmount": 200000,
+    "propertyValue": 250000
   }'
 ```
 
-**Health Insurance Decision:**
+#### Auto Insurance
 ```bash
-curl -X POST "http://localhost:8081/decide/health/standard?clientId=test123" \
+curl -X POST "http://localhost:8081/decide/auto/standard?clientId=default" \
   -H "Content-Type: application/json" \
   -d '{
-    "age": 45,
-    "medicalHistory": "clean",
-    "coverageAmount": 500000
+    "driverAge": 25,
+    "drivingHistory": 5,
+    "vehicleValue": 25000,
+    "coverageType": "comprehensive"
   }'
 ```
 
-## Benefits of This Architecture
+### Sample Responses
 
-### 1. **Scalability**
-- New domains can be added without modifying existing code
-- Each domain is isolated and can be developed independently
-- Rules can be updated independently per domain
-
-### 2. **Maintainability**
-- Clear separation of concerns
-- Domain-specific rule logic
-- Easy to test individual rule modules
-
-### 3. **Flexibility**
-- Dynamic rule loading from Maven repository
-- Fallback mechanisms for reliability
-- Support for hot-reloading rule updates
-
-### 4. **Deployment Options**
-- **Development**: Use classpath loading for quick iteration
-- **Production**: Use dynamic loading for rule updates without application restarts
-- **Hybrid**: Combine both approaches for maximum flexibility
-
-## Running the Application
-
-### Development Mode
-```bash
-docker compose up --build
+#### Approved Application
+```json
+{
+  "status": "APPROVED",
+  "reasons": [],
+  "score": 85,
+  "premium": 1200.00
+}
 ```
 
-### Production Mode
-```bash
-# Build and deploy rule modules to Maven repository
-mvn clean install deploy
-
-# Run application with dynamic rule loading
-docker compose up --build
+#### Rejected Application
+```json
+{
+  "status": "REJECTED",
+  "reasons": [
+    "Credit score below minimum threshold",
+    "Income insufficient for loan amount"
+  ],
+  "score": 45
+}
 ```
 
-## Monitoring and Debugging
+## 📁 Project Structure
 
-### Check Rule Loading
-```bash
-docker compose logs | grep "Successfully loaded"
+```
+├── rules-auto/                 # Auto insurance rules module
+├── rules-life/                 # Life insurance rules module
+├── rules-mortgage/             # Mortgage insurance rules module
+├── rules-travel/               # Travel insurance rules module
+├── underwriter-app/            # Main Spring Boot application
+│   ├── src/main/java/
+│   │   └── com/example/underwriter/
+│   │       ├── adapter/        # Domain-specific adapters
+│   │       ├── config/         # Configuration classes
+│   │       ├── controller/     # REST controllers
+│   │       ├── model/          # Data models
+│   │       └── service/        # Business logic services
+│   ├── src/main/resources/
+│   │   ├── config/             # Domain configurations
+│   │   └── samples/            # Sample request/response files
+│   └── pom.xml
+├── docker-compose.yml          # Docker Compose configuration
+├── Dockerfile                  # Docker image definition
+└── pom.xml                     # Parent POM
 ```
 
-### Test Rule Execution
-```bash
-# Test approval case
-curl -X POST "http://localhost:8081/decide/mortgage/standard?clientId=test123" \
-  -H "Content-Type: application/json" \
-  -d '{"creditScore":650,"income":75000,"loanAmount":300000,"propertyValue":350000}'
+## 🔧 Configuration
 
-# Test rejection case
-curl -X POST "http://localhost:8081/decide/mortgage/standard?clientId=test123" \
-  -H "Content-Type: application/json" \
-  -d '{"creditScore":600,"income":75000,"loanAmount":300000,"propertyValue":350000}'
+### Domain Configurations
+
+Each domain has its own configuration files located in `underwriter-app/src/main/resources/config/{domain}/`:
+
+- `default.json` - Default configuration for the domain
+- `clientB.json` - Client-specific configuration
+
+### Rule Modules
+
+Each domain has its own rule module with:
+- `pom.xml` - Maven configuration
+- `src/main/resources/META-INF/kmodule.xml` - Drools module configuration
+- `src/main/resources/rules/main.drl` - Business rules
+
+## 📊 Sequence Diagrams
+
+The project includes detailed sequence diagrams showing:
+
+1. **[Application Startup Flow](application-startup-sequence.md)** - How rule modules are loaded during application startup
+2. **[Rule Execution Flow](rule-execution-sequence.md)** - How decisions are processed from API request to response
+
+## 🐳 Docker Deployment
+
+### Build and Run with Docker
+
+```bash
+# Build the application
+docker build -t underwriter-rules-engine .
+
+# Run the container
+docker run -p 8081:8081 underwriter-rules-engine
 ```
 
-## Future Enhancements
+### Using Docker Compose
 
-1. **Rule Versioning**: Support multiple rule versions per domain
-2. **Rule Validation**: Add rule validation and testing frameworks
-3. **Performance Monitoring**: Add metrics for rule execution performance
-4. **Rule Templates**: Create reusable rule templates for common patterns
-5. **Web UI**: Add web interface for rule management and testing
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+## 🧪 Testing
+
+### Sample Data
+
+The project includes sample JSON files for testing each domain:
+
+- `underwriter-app/samples/mortgage-default-approve.json`
+- `underwriter-app/samples/auto-clientB-reject.json`
+- `underwriter-app/samples/life-default-approve.json`
+- `underwriter-app/samples/travel-clientB-reject.json`
+
+### Running Tests
+
+```bash
+# Run all tests
+mvn test
+
+# Run specific module tests
+cd rules-mortgage && mvn test
+```
+
+## 🔄 Adding New Domains
+
+To add a new domain:
+
+1. Create a new rule module (e.g., `rules-health/`)
+2. Add domain adapter in `underwriter-app/src/main/java/com/example/underwriter/adapter/`
+3. Add configuration files in `underwriter-app/src/main/resources/config/`
+4. Register the domain in `RulesRegistry.java`
+5. Add sample data in `underwriter-app/samples/`
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Naveen** - [GitHub Profile](https://github.com/Naveen3368)
+
+## 🙏 Acknowledgments
+
+- Spring Boot team for the excellent framework
+- Drools team for the powerful rules engine
+- Apache Maven for build management
+- Docker team for containerization support
+
+---
+
+⭐ **Star this repository if you find it helpful!**
