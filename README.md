@@ -10,6 +10,8 @@ A sophisticated, domain-driven rules engine built with Spring Boot and Drools, d
 - **RESTful API**: Clean REST endpoints for decision requests
 - **Docker Support**: Containerized deployment with Docker and Docker Compose
 - **Comprehensive Documentation**: Detailed sequence diagrams and architecture documentation
+- **Dynamic Rule Configuration**: Flexible rule validation with optional/mandatory fields and client-specific thresholds
+- **KJAR Support**: Knowledge JAR (KJAR) integration with KieScanner for hot deployment
 
 ## 🏗️ Architecture
 
@@ -20,6 +22,7 @@ The system follows a modular architecture with clear separation of concerns:
 - **Engine Service**: Orchestrates rule execution and decision processing
 - **Configuration Store**: Manages domain-specific configurations
 - **REST Controller**: Handles HTTP requests and responses
+- **Dynamic Rule Engine**: Configurable validation rules with client-specific thresholds
 
 ## 📋 Prerequisites
 
@@ -226,6 +229,179 @@ To add a new domain:
 3. Add configuration files in `underwriter-app/src/main/resources/config/`
 4. Register the domain in `RulesRegistry.java`
 5. Add sample data in `underwriter-app/samples/`
+
+## 🤖 GPT Prompts & Dynamic Rule Configuration
+
+### 1. Dynamic Rule Configuration
+
+The rules engine supports dynamic configuration where rules can be made optional or mandatory based on business requirements:
+
+#### Configuration Structure
+```json
+{
+  "fieldValidations": {
+    "age": {
+      "mandatory": false,
+      "thresholds": {
+        "clientA": 18,
+        "clientB": 20,
+        "default": 18
+      }
+    },
+    "creditScore": {
+      "mandatory": true,
+      "thresholds": {
+        "clientA": 700,
+        "clientB": 750,
+        "default": 650
+      }
+    },
+    "employmentYears": {
+      "mandatory": false,
+      "thresholds": {
+        "clientA": 2,
+        "clientB": 3,
+        "default": 1
+      }
+    }
+  }
+}
+```
+
+#### Rule Generation Logic
+```java
+// Dynamic rule generation based on configuration
+if (config.isFieldMandatory(fieldName) || request.hasField(fieldName)) {
+    int threshold = config.getThreshold(fieldName, clientId);
+    // Generate validation rule with threshold
+}
+```
+
+### 2. Multi-Domain Support
+
+The system supports multiple insurance domains with different rule sets:
+
+#### Domain-Specific Adapters
+- **Mortgage Adapter**: Handles credit score, income, down payment, loan amount
+- **Travel Adapter**: Manages trip duration, destination risk, traveler age
+- **Auto Adapter**: Processes driver age, driving history, vehicle value
+- **Life Adapter**: Evaluates age, health conditions, coverage amount
+
+#### Domain Configuration
+```json
+{
+  "mortgage": {
+    "rules": ["creditScore", "income", "downPayment", "loanAmount"],
+    "mandatory": ["creditScore", "income"]
+  },
+  "travel": {
+    "rules": ["tripDuration", "destinationRisk", "travelerAge"],
+    "mandatory": ["tripDuration", "travelerAge"]
+  }
+}
+```
+
+### 3. Working Application Features
+
+#### Supported Domains
+- **Mortgage Insurance**: Complete underwriting with configurable thresholds
+- **Travel Insurance**: Trip-based risk assessment
+- **Auto Insurance**: Vehicle and driver risk evaluation
+- **Life Insurance**: Health and age-based assessment
+
+#### Docker Compose Setup
+```yaml
+version: '3.8'
+services:
+  underwriter-app:
+    build: .
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    volumes:
+      - ./config:/app/config
+```
+
+#### Sample Test Data
+
+**Mortgage Approval (Client A)**
+```json
+{
+  "domain": "mortgage",
+  "product": "standard",
+  "clientId": "clientA",
+  "data": {
+    "creditScore": 750,
+    "income": 85000,
+    "downPayment": 50000,
+    "loanAmount": 200000,
+    "propertyValue": 250000
+  }
+}
+```
+
+**Travel Insurance (Client B)**
+```json
+{
+  "domain": "travel",
+  "product": "premium",
+  "clientId": "clientB",
+  "data": {
+    "tripDuration": 14,
+    "destinationRisk": "low",
+    "travelerAge": 35,
+    "coverageAmount": 50000
+  }
+}
+```
+
+### 4. KJAR & KieScanner Capabilities
+
+#### What is KJAR?
+**KJAR (Knowledge JAR)** is a Maven artifact that contains Drools rules, processes, and other knowledge assets. It enables:
+- **Versioned Rules**: Rules are versioned and managed like code
+- **Hot Deployment**: Rules can be updated without restarting the application
+- **Rule Isolation**: Each domain has its own rule set
+- **Maven Integration**: Rules are built and deployed using Maven
+
+#### KieScanner Benefits
+```java
+// Automatic rule scanning and reloading
+KieScanner kieScanner = kieServices.newKieScanner(kieContainer);
+kieScanner.start(10000L); // Scan every 10 seconds
+```
+
+#### Capabilities
+- **Dynamic Rule Loading**: Load rules from Maven repositories
+- **Version Management**: Support multiple rule versions
+- **Hot Deployment**: Update rules without application restart
+- **Fallback Support**: Embedded rules when external KJAR unavailable
+
+#### Rule Module Structure
+```
+rules-mortgage/
+├── pom.xml
+├── src/main/resources/
+│   ├── META-INF/kmodule.xml
+│   └── rules/
+│       ├── main.drl
+│       ├── credit-rules.drl
+│       └── income-rules.drl
+```
+
+#### Sample Rules
+```drools
+// Dynamic credit score validation
+rule "Credit Score Validation"
+when
+    $request: MortgageRequest(creditScore < $threshold)
+    $config: DomainConfig(clientId == $request.clientId)
+    $field: FieldConfig(name == "creditScore", mandatory == true)
+then
+    insert(new ValidationError("Credit score below threshold"));
+end
+```
 
 ## 🤝 Contributing
 
